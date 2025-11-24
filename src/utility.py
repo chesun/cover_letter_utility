@@ -26,11 +26,9 @@ class PathData:
         if self.hostname == 'DH444T2TQ9':
             self.template_path = '/Users/chesun1/Dropbox/Davis/job_market/cover_letter'
             self.app_path = ';/Users/chesun1/Dropbox/Davis/job_market/applications/US'
-        elif self.hostname == 'Christinas-MacBook-Air.local' or self.hostname == "campus-110-118.ucdavis.edu":
+        else:
             self.template_path = '/Users/christinasun/Library/CloudStorage/Dropbox/Davis/job_market/cover_letter'
             self.app_path = '/Users/christinasun/Library/CloudStorage/Dropbox/Davis/job_market/applications/US'
-        else:
-            raise InvalidHostError("Unknown host name")
 
 
 @dataclass
