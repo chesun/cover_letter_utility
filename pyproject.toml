@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cover-letter-utility"
+description = "Batch-customize .docx cover letters from a CSV of applications."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Christina Che Sun", email = "che.sun.1996@gmail.com" },
+]
+keywords = ["cover-letter", "docx", "mail-merge", "job-market", "template"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Office/Business",
+]
+dependencies = [
+    "python-docx>=1.1",
+    "python-docx-replace>=0.4",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+notebook = ["ipykernel>=6", "jupyter-client>=8"]
+
+[project.urls]
+Homepage = "https://github.com/chesun/cover_letter_utility"
+Repository = "https://github.com/chesun/cover_letter_utility"
+
+[project.scripts]
+cover-letter = "cover_letter_utility.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.dynamic]
+version = { attr = "cover_letter_utility.__version__" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

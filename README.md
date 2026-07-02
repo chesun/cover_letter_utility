@@ -36,21 +36,24 @@ exactly (minus the `${}`).
 Requires Python 3.9+.
 
 ```bash
-pip install -r requirements.txt
+pip install -e .
 ```
 
-Runtime dependencies are just `python-docx` and `python-docx-replace`. For the
-notebook, install the dev extras instead: `pip install -r requirements-dev.txt`.
+This installs the runtime dependencies (`python-docx`, `python-docx-replace`)
+and the `cover-letter` command. For the tests, add the dev extras
+(`pip install -e ".[dev]"`); for the notebook, add `pip install -e ".[notebook]"`.
 
 ## Usage
 
 ### Command line
 
+The `cover-letter` command is installed with the package. The repo ships an
+example template and CSV, so this runs out of the box:
+
 ```bash
-cd src
-python utility.py \
-    --template example_template.docx \
-    --csv example_apps.csv \
+cover-letter \
+    --template examples/example_template.docx \
+    --csv examples/example_apps.csv \
     --out ./demo_output
 ```
 
@@ -60,23 +63,21 @@ Options:
 - `--csv` — path to the applications CSV (its headers name the template fields).
 - `--out` — output directory; one folder per application is created here.
 - `--slug-field` — name of the id column (default: `slug`).
-
-The repo ships `src/example_template.docx` and `src/example_apps.csv` so the
-command above runs out of the box.
+- `--version` — print the version and exit.
 
 ### From Python
 
 ```python
-from utility import process_csv
+from cover_letter_utility import process_csv
 
 process_csv(
-    template="example_template.docx",
-    csv_path="example_apps.csv",
+    template="examples/example_template.docx",
+    csv_path="examples/example_apps.csv",
     out_path="./demo_output",
 )
 ```
 
-`src/customize_letter.ipynb` walks through the same workflow in a notebook.
+`examples/customize_letter.ipynb` walks through the same workflow in a notebook.
 
 ## Notes
 
@@ -87,6 +88,13 @@ process_csv(
   writes to `slug_2`, `slug_3`, and so on — so an accidental re-run can't clobber
   letters you've already edited by hand.
 - **Duplicate slugs within a CSV** are also disambiguated with a numeric suffix.
+
+## Development
+
+```bash
+pip install -e ".[dev]"
+pytest
+```
 
 ## License
 

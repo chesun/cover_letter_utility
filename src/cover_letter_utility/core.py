@@ -1,18 +1,6 @@
-"""Batch-customize .docx cover letters from a CSV of applications.
-
-For each row in the CSV, the placeholder fields in a Word template
-(written as ``${field_name}``) are replaced with that row's values, and
-the result is saved as its own letter in a per-application folder.
-
-Run as a CLI::
-
-    python utility.py --template letter_template.docx --csv apps.csv --out ./applications
-
-or import :func:`process_csv` / :func:`customize_cover_letter` as a library.
-"""
+"""Core logic: fill ``${field}`` placeholders in a .docx template per CSV row."""
 from __future__ import annotations
 
-import argparse
 import csv
 import os
 
@@ -169,43 +157,3 @@ def process_csv(
         )
         written.append(used_slug)
     return written
-
-
-def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(
-        description="Batch-customize .docx cover letters from a CSV. "
-                    "Template fields use ${field_name}; CSV headers name the fields.",
-    )
-    parser.add_argument(
-        '--template', required=True,
-        help="Path to the .docx template containing ${field} placeholders.",
-    )
-    parser.add_argument(
-        '--csv', dest='csv_path', required=True,
-        help="Path to the applications CSV (headers name the template fields).",
-    )
-    parser.add_argument(
-        '--out', dest='out_path', required=True,
-        help="Output directory; one folder per application is created here.",
-    )
-    parser.add_argument(
-        '--slug-field', default=DEFAULT_SLUG_FIELD,
-        help=f"CSV column identifying each application (default: {DEFAULT_SLUG_FIELD!r}).",
-    )
-    args = parser.parse_args(argv)
-
-    for label, path in (('template', args.template), ('CSV', args.csv_path)):
-        if not os.path.isfile(path):
-            parser.error(f"{label} not found: {path}")
-
-    written = process_csv(
-        template=args.template,
-        csv_path=args.csv_path,
-        out_path=args.out_path,
-        slug_field=args.slug_field,
-    )
-    print(f"Generated {len(written)} cover letter(s) in {args.out_path}")
-
-
-if __name__ == '__main__':
-    main()

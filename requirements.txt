@@ -1,3 +1,0 @@
-# Runtime dependencies for the cover letter utility.
-python-docx==1.2.0
-python-docx-replace==0.4.4
