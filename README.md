@@ -1,22 +1,48 @@
 # cover_letter_utility
 
-Batch-customize Word (`.docx`) cover letters from a spreadsheet. Write one
-template with `${placeholder}` fields, list your applications in a CSV, and
-generate a personalized letter for each — one folder per application.
+**Write your cover letter once, then generate a personalized copy for every job
+you apply to — automatically.**
 
-Built for the academic job market, where a candidate may send near-identical
-letters to dozens of institutions that differ only in a few fields (name,
-department, title, date). Instead of editing dozens of Word files by hand, you
-edit one template and one CSV.
+If you're on the academic job market, you might send the same letter to dozens of
+places that differ in only a few words: the institution's name, the department,
+the job title, the date. Editing each one by hand is slow and easy to get wrong
+(there's a special kind of dread in realizing you sent School B a letter
+addressed to School A). This tool does the swapping for you: you keep one
+template and one spreadsheet, and it produces a tidy, individually-addressed
+letter for each application.
+
+You don't need to be a programmer to use it — if you can edit a Word document and
+a spreadsheet and copy-paste a couple of commands, you're set.
+
+## Quick start
+
+You'll need [Python 3.9 or newer](https://www.python.org/downloads/). Then, in a
+terminal:
+
+```bash
+git clone https://github.com/chesun/cover_letter_utility.git
+cd cover_letter_utility
+pip install -e .
+cover-letter --template examples/example_template.docx --csv examples/example_apps.csv --out ./demo_output
+```
+
+That last command uses the bundled example files and drops three finished letters
+into a new `demo_output/` folder. Open them to see what happened, then swap in
+your own template and spreadsheet (next section).
 
 ## How it works
 
-1. In your Word template, write `${field_name}` anywhere a value should change
-   per application — for example `${institution_name}`, `${dept_name}`,
-   `${job_title}`, `${letter_date}`. The `${...}` syntax is required (it comes
-   from [python-docx-replace](https://pypi.org/project/python-docx-replace/)).
-2. In a CSV, make one column named `slug` (a short id used for the output
-   folder) plus one column per placeholder. Each row is one application:
+There are two things you provide: a **template** (your letter) and a **CSV** (your
+list of applications).
+
+1. In your Word template, type `${field_name}` anywhere a value should change from
+   one application to the next — for example `${institution_name}`, `${dept_name}`,
+   `${job_title}`, `${letter_date}`. Everything else stays exactly as you wrote it.
+   The `${...}` marker is what tells the tool "replace this."
+
+2. In a spreadsheet saved as CSV, make one column called `slug` (a short nickname
+   for each application — it becomes the folder name) plus one column for each
+   `${field_name}` in your letter. Each row is one job:
 
    ```csv
    slug,institution_name,dept_name,job_title,letter_date
@@ -24,12 +50,11 @@ edit one template and one CSV.
    sample_university_pd,Sample University,School of Public Policy,Postdoctoral Fellow,"November 16, 2025"
    ```
 
-3. Run the tool. For each row it fills the template and writes
-   `cover_letter_<slug>.docx` into a folder named `<slug>` under your output
-   directory.
+3. Run the tool. For each row it fills in your template and saves
+   `cover_letter_<slug>.docx` inside a folder named after that application.
 
-Column headers in the CSV must match the placeholder names in the template
-exactly (minus the `${}`).
+The one rule to remember: the column names in your spreadsheet must match the
+`${field_name}` markers in your letter exactly (just without the `${}`).
 
 ## Install
 
@@ -39,16 +64,17 @@ Requires Python 3.9+.
 pip install -e .
 ```
 
-This installs the runtime dependencies (`python-docx`, `python-docx-replace`)
-and the `cover-letter` command. For the tests, add the dev extras
-(`pip install -e ".[dev]"`); for the notebook, add `pip install -e ".[notebook]"`.
+This installs the tool (the `cover-letter` command) along with everything it needs
+to run. Two optional add-ons: `pip install -e ".[dev]"` also installs the test
+tools, and `pip install -e ".[notebook]"` adds what you need to run the example
+notebook.
 
 ## Usage
 
 ### Command line
 
-The `cover-letter` command is installed with the package. The repo ships an
-example template and CSV, so this runs out of the box:
+The `cover-letter` command comes with the package. The repo ships an example
+template and CSV, so this works immediately:
 
 ```bash
 cover-letter \
@@ -67,6 +93,8 @@ Options:
 
 ### From Python
 
+If you'd rather call it from your own script or a notebook:
+
 ```python
 from cover_letter_utility import process_csv
 
@@ -77,17 +105,19 @@ process_csv(
 )
 ```
 
-`examples/customize_letter.ipynb` walks through the same workflow in a notebook.
+`examples/customize_letter.ipynb` walks through the same workflow step by step in a
+notebook.
 
-## Notes
+## Good to know
 
-- **Output is `.docx` only.** Export to PDF from Word or LibreOffice when you're
-  ready to submit. (Automated `.docx`→PDF conversion is unreliable across
-  platforms, so it's intentionally left out.)
-- **Re-runs never overwrite.** If a `slug` folder already exists, the next run
-  writes to `slug_2`, `slug_3`, and so on — so an accidental re-run can't clobber
-  letters you've already edited by hand.
-- **Duplicate slugs within a CSV** are also disambiguated with a numeric suffix.
+- **You get `.docx` files, not PDFs.** Open a finished letter in Word or
+  LibreOffice and export to PDF there when you're ready to submit. (Automatic
+  PDF conversion is unreliable across computers, so it's left out on purpose.)
+- **Running it again won't overwrite your work.** If a `slug` folder already
+  exists, the next run writes to `slug_2`, `slug_3`, and so on — so a rerun can
+  never clobber a letter you've already tweaked by hand.
+- **Repeated slugs in one spreadsheet** are handled the same way, with a numeric
+  suffix, so nothing silently collides.
 
 ## Development
 
