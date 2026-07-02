@@ -191,3 +191,6 @@ homevenv/
 # The tracked example file (example_apps.csv) is intentionally not ignored.
 src/dicts_*.csv
 src/dicts*.xlsx
+
+# Generated cover letters (output of a run)
+demo_output/

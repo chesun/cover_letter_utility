@@ -1,88 +1,83 @@
-"""Utility functions to replace fields in cover letter (.docx) and save as .pdf"""
-import os
-import socket
+"""Batch-customize .docx cover letters from a CSV of applications.
+
+For each row in the CSV, the placeholder fields in a Word template
+(written as ``${field_name}``) are replaced with that row's values, and
+the result is saved as its own letter in a per-application folder.
+
+Run as a CLI::
+
+    python utility.py --template letter_template.docx --csv apps.csv --out ./applications
+
+or import :func:`process_csv` / :func:`customize_cover_letter` as a library.
+"""
+from __future__ import annotations
+
+import argparse
 import csv
-from dataclasses import dataclass, field
+import os
+
 from python_docx_replace import docx_replace
 from docx import Document
 
-__all__ = ['PathData', 'FileData',
-           'customize_cover_letter', 'read_csv_to_dicts']
+__all__ = [
+    'customize_cover_letter',
+    'read_csv_to_dicts',
+    'ensure_unique_slug',
+    'process_csv',
+]
+
+DEFAULT_SLUG_FIELD = 'slug'
 
 
-class InvalidHostError(Exception):
-    """Custom exception for unknown host machine"""
-    pass
-
-
-@dataclass
-class PathData:
-    """File path strings"""
-    hostname: str = socket.gethostname()
-    template_path: str = field(init=False)
-    app_path: str = field(init=False)
-
-    def __post_init__(self):
-        if self.hostname == 'DH444T2TQ9':
-            self.template_path = '/Users/chesun1/Dropbox/Davis/job_market/cover_letter'
-            self.app_path = '/Users/chesun1/Dropbox/Davis/job_market/applications/US'
-        else:
-            self.template_path = '/Users/christinasun/Library/CloudStorage/Dropbox/Davis/job_market/cover_letter'
-            self.app_path = '/Users/christinasun/Library/CloudStorage/Dropbox/Davis/job_market/applications/US'
-
-
-@dataclass
-class FileData:
-    """Cover letter template file names"""
-    applied_template_name: str = 'applied_micro_academic_cover_letter_template.docx'
-    behavioral_template_name: str = 'behavioral_academic_cover_letter_template.docx'
-    teaching_template_name: str = 'teaching_cover_letter_template.docx'
-
-
-# a function to replace fields in cover letter template and save to application directory
 def customize_cover_letter(
         template_name: str,
         template_path: str,
         app_path: str,
         slug: str,
-        replace_dict: dict
-) -> None:
-    """Function to replace key fields using replace_dict in cover letter template, 
-    create a directory with name of slug, and save new letter in directory 
+        replace_dict: dict,
+) -> str:
+    """Replace ``${key}`` fields in a template and save one letter.
+
+    Creates a folder named ``slug`` inside ``app_path`` (uniquified if it
+    already exists) and writes ``cover_letter_<slug>.docx`` into it.
+
     Args:
-        template_name (str): full path name for cover letter template
-        template_path (str): path for cover letter template
-        app_path (str): path for applications
-        slug (str): unique slug for application folder
-        replace_dict (dict): dictionary with where keys are field names in template, 
-        and values are replacement values
+        template_name: File name of the .docx template.
+        template_path: Directory containing the template.
+        app_path: Directory in which to create the application folder.
+        slug: Short unique identifier for this application / folder.
+        replace_dict: Maps template field names to replacement values.
+            A field ``${institution_name}`` is filled from key
+            ``institution_name``.
+
     Returns:
-        None
+        The slug actually used on disk (may differ from ``slug`` if a
+        folder of that name already existed).
     """
-    # ensure slug is unique on disk
+    # ensure slug is unique on disk so a previous run is never overwritten
     slug = ensure_unique_slug(app_path, slug)
     app_dir = os.path.join(app_path, slug)
 
-    # create application directory
-    os.makedirs(app_dir,
-                exist_ok=True)
-    # get template
+    os.makedirs(app_dir, exist_ok=True)
+
     template = Document(os.path.join(template_path, template_name))
-    # replace fields using dict
     docx_replace(template, **replace_dict)
-    # save in new application directory
     template.save(os.path.join(app_dir, f'cover_letter_{slug}.docx'))
+    return slug
 
 
 def read_csv_to_dicts(
         filepath: str,
-        slug_field: str = "slug",
-        make_unique: bool = True
+        slug_field: str = DEFAULT_SLUG_FIELD,
+        make_unique: bool = True,
 ) -> list[dict]:
-    """
-    Reads a CSV file and returns a list of dictionaries,
-    where each dictionary represents a row.
-    Default to making the values in `slug_field` unique.
+    """Read a CSV into a list of row dicts, keyed by column header.
+
+    The column named ``slug_field`` identifies each application. When
+    ``make_unique`` is True (the default), repeated slugs within the CSV
+    get a numeric suffix (``mit`` -> ``mit_2``); when False, a duplicate
+    slug raises ``ValueError``. All string values are stripped of
+    surrounding whitespace.
     """
     data = []
     seen_slugs = {}  # base_slug -> count
@@ -94,7 +89,6 @@ def read_csv_to_dicts(
             slug = row.get(slug_field, "").strip()
 
             if not slug:
-                # you can decide whether to allow blank slugs or raise
                 raise ValueError(f"Missing slug in row {line_num}")
 
             base_slug = slug
@@ -127,9 +121,8 @@ def read_csv_to_dicts(
 
 
 def ensure_unique_slug(app_path: str, slug: str) -> str:
-    """
-    If a folder with `slug` already exists in app_path,
-    append _2, _3, ... until we find a free one.
+    """Return ``slug``, or ``slug_2``/``slug_3``/... if a folder of that
+    name already exists in ``app_path``, so no prior run is overwritten.
     """
     base = slug
     i = 1
@@ -141,3 +134,78 @@ def ensure_unique_slug(app_path: str, slug: str) -> str:
         full_path = os.path.join(app_path, slug)
 
     return slug
+
+
+def process_csv(
+        template: str,
+        csv_path: str,
+        out_path: str,
+        slug_field: str = DEFAULT_SLUG_FIELD,
+) -> list[str]:
+    """Generate one cover letter per row of ``csv_path``.
+
+    Args:
+        template: Path to the .docx template (directory + file name).
+        csv_path: Path to the applications CSV. Its header row names the
+            template fields; one column must be ``slug_field``.
+        out_path: Directory in which per-application folders are created.
+        slug_field: Name of the slug column (default ``"slug"``).
+
+    Returns:
+        The list of slugs actually written on disk.
+    """
+    apps = read_csv_to_dicts(csv_path, slug_field=slug_field)
+    template_dir, template_name = os.path.split(template)
+
+    written = []
+    for app in apps:
+        replace_dict = {k: v for k, v in app.items() if k != slug_field}
+        used_slug = customize_cover_letter(
+            template_name=template_name,
+            template_path=template_dir,
+            app_path=out_path,
+            slug=app[slug_field],
+            replace_dict=replace_dict,
+        )
+        written.append(used_slug)
+    return written
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(
+        description="Batch-customize .docx cover letters from a CSV. "
+                    "Template fields use ${field_name}; CSV headers name the fields.",
+    )
+    parser.add_argument(
+        '--template', required=True,
+        help="Path to the .docx template containing ${field} placeholders.",
+    )
+    parser.add_argument(
+        '--csv', dest='csv_path', required=True,
+        help="Path to the applications CSV (headers name the template fields).",
+    )
+    parser.add_argument(
+        '--out', dest='out_path', required=True,
+        help="Output directory; one folder per application is created here.",
+    )
+    parser.add_argument(
+        '--slug-field', default=DEFAULT_SLUG_FIELD,
+        help=f"CSV column identifying each application (default: {DEFAULT_SLUG_FIELD!r}).",
+    )
+    args = parser.parse_args(argv)
+
+    for label, path in (('template', args.template), ('CSV', args.csv_path)):
+        if not os.path.isfile(path):
+            parser.error(f"{label} not found: {path}")
+
+    written = process_csv(
+        template=args.template,
+        csv_path=args.csv_path,
+        out_path=args.out_path,
+        slug_field=args.slug_field,
+    )
+    print(f"Generated {len(written)} cover letter(s) in {args.out_path}")
+
+
+if __name__ == '__main__':
+    main()
